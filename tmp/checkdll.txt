@@ -1,0 +1,11 @@
+@('nvcompiler.dll','nvfatbinaryLoader.dll','nvptxJitCompiler.dll','nvopencl.dll') | ForEach-Object {
+    $name = $_
+    Write-Host ""
+    Write-Host "=== 搜尋 $name ===" -ForegroundColor Cyan
+    $hits = Get-ChildItem 'C:\' -Filter $name -Recurse -File -ErrorAction SilentlyContinue -Force | Select-Object -ExpandProperty FullName
+    if ($hits.Count -eq 0) {
+        Write-Host "  [整顆 C 碟都找不到]" -ForegroundColor Red
+    } else {
+        $hits | ForEach-Object { Write-Host "  $_" -ForegroundColor Green }
+    }
+}
