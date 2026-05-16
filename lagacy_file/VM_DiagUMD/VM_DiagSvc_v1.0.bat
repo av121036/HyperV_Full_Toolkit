@@ -1,10 +1,16 @@
 @echo off
-chcp 65001 >nul
 REM ============================================================
-REM  Host_Camo_v1.2.bat - Hyper-V Host side VM camouflage launcher
-REM  v1.2: 支援批量選擇 (逗號 / 區間 / all)
+REM  VM_DiagSvc_v1.0.bat - VirtualRender KMD service deep check
+REM  Run this INSIDE the VM as Administrator.
+REM
+REM  Checks whether the partition kernel-mode driver service
+REM  (VirtualRender, defined by vrd.inf) is actually running,
+REM  where vrd.sys lives, and whether it exists at all.
+REM
+REM  The result tells us whether the Win10 + Blackwell GPU-PV
+REM  failure is at the file level, service level, or protocol level.
 REM ============================================================
-title Host Camo v1.2 - Hyper-V VM Camouflage (Batch)
+title VM DiagSvc v1.0 - VirtualRender KMD service deep check
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -16,7 +22,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set "PS1=%~dp0Host_Camo_v1.2.ps1"
+set "PS1=%~dp0VM_DiagSvc_v1.0.ps1"
 if not exist "%PS1%" (
     echo [X] Missing file: %PS1%
     pause

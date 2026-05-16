@@ -1,8 +1,11 @@
 @echo off
 REM ============================================================
-REM  Host_Camo_v1.1.bat - Hyper-V Host side VM camouflage launcher
+REM  Host_Master_v1.7.bat - GPU-PV Passthrough + Driver Copy to VHDX
+REM  v1.7: Tuned MMIO 1G/8G + GPU quota 8% (multi-VM friendly)
+REM  v1.5: 5d auto-detects NC / NCSOFT roots (Lineage / Purple / Aion / Blade / Throne / BnS)
+REM  Pure ASCII launcher - UI rendered by PowerShell
 REM ============================================================
-title Host Camo v1.1 - Hyper-V VM Camouflage
+title Host Master v1.7 - GPU Passthrough + Driver Copy (Multi-VM)
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -14,7 +17,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set "PS1=%~dp0Host_Camo_v1.1.ps1"
+set "PS1=%~dp0Host_Master_v1.7.ps1"
 if not exist "%PS1%" (
     echo [X] Missing file: %PS1%
     pause

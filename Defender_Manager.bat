@@ -1,4 +1,5 @@
 @echo off
+chcp 950 >nul
 title Windows Defender 管理工具
 
 :: ===== 自動請求系統管理員權限 =====

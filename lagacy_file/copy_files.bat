@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 echo 開始複製檔案...
 
 :: 自動抓取 bat 檔案所在的資料夾路徑

@@ -8,10 +8,12 @@
 #    - 建完一台後可以連續再建下一台 (批次模式)
 #
 #  預設值 (可在下方常數區改):
-#    掃描資料夾    : D:\Hyper-V\Disks  (找不到就改問你)
+#    掃描資料夾    : C:\Hyperdisk  (找不到就改問你)
 #    VM 世代       : 第 2 代 (Generation 2 / UEFI)
 #    記憶體        : 6 GB,動態記憶體關閉
 #    vCPU          : 4
+#    檢查點        : 關閉 (AutomaticCheckpointsEnabled=False, CheckpointType=Disabled)
+#                    這樣 GPU-PV 直通才不會衝突,VHDX 也不會莫名長大
 #    網路交換器    : 第一個 External,沒有就用 Default Switch
 #    VM 存放位置   : 跟所選 VHDX 同資料夾,沒有就用 Hyper-V 預設路徑
 #
@@ -29,12 +31,13 @@ try {
 # =========================================================
 #  使用者可調整的預設值
 # =========================================================
-$DEFAULT_DISK_FOLDER = 'C:\Hyperdisk'
-$DEFAULT_GENERATION  = 2
-$DEFAULT_MEMORY_GB   = 6
-$DEFAULT_VCPU        = 4
-$DEFAULT_DYNAMIC_MEM = $false   # 關閉動態記憶體
-$PROMPT_TIMEOUT_SEC  = 5        # 每個提示倒數秒數
+$DEFAULT_DISK_FOLDER       = 'C:\Hyperdisk'
+$DEFAULT_GENERATION        = 2
+$DEFAULT_MEMORY_GB         = 6
+$DEFAULT_VCPU              = 4
+$DEFAULT_DYNAMIC_MEM       = $false   # 關閉動態記憶體
+$DEFAULT_DISABLE_CHECKPOINT = $true   # 關閉自動檢查點 (GPU-PV 相容性 + 避免 VHDX 越長越大)
+$PROMPT_TIMEOUT_SEC        = 5        # 每個提示倒數秒數
 
 # =========================================================
 #  Helper: 文字輸出
@@ -321,6 +324,7 @@ while ($true) {
     Write-Host (' 世代         : Generation {0}' -f $DEFAULT_GENERATION) -ForegroundColor White
     Write-Host (' 記憶體       : {0} GB (動態={1})' -f $memGB, $DEFAULT_DYNAMIC_MEM) -ForegroundColor White
     Write-Host (' vCPU         : {0}' -f $cpuCount)      -ForegroundColor White
+    Write-Host (' 檢查點       : {0}' -f $(if ($DEFAULT_DISABLE_CHECKPOINT) { '關閉 (Disabled)' } else { '預設 (Standard)' })) -ForegroundColor White
     Write-Host (' 網路交換器   : {0}' -f $(if ($switchName) { $switchName } else { '(無)' })) -ForegroundColor White
     Write-Host (' VHDX (掛載)  : {0}' -f $vhdx.FullName) -ForegroundColor White
     Write-Host (' VM 存放位置  : {0}' -f $vmPath)        -ForegroundColor White
@@ -386,6 +390,15 @@ while ($true) {
 
                 Set-VMMemory -VMName $vmName -DynamicMemoryEnabled $DEFAULT_DYNAMIC_MEM -ErrorAction Stop
                 W-OK ("動態記憶體 = {0}" -f $DEFAULT_DYNAMIC_MEM)
+
+                if ($DEFAULT_DISABLE_CHECKPOINT) {
+                    try {
+                        Set-VM -Name $vmName -AutomaticCheckpointsEnabled $false -CheckpointType Disabled -ErrorAction Stop
+                        W-OK '檢查點已關閉 (AutomaticCheckpoints=False, CheckpointType=Disabled)'
+                    } catch {
+                        W-Warn ("檢查點關閉失敗 (建立後可手動到 Hyper-V 管理員調整): $($_.Exception.Message)")
+                    }
+                }
 
                 if ($DEFAULT_GENERATION -eq 2) {
                     try {

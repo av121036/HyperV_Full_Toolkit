@@ -1,10 +1,14 @@
 @echo off
-chcp 65001 >nul
 REM ============================================================
-REM  Host_Camo_v1.2.bat - Hyper-V Host side VM camouflage launcher
-REM  v1.2: 支援批量選擇 (逗號 / 區間 / all)
+REM  VM_DiagUMD_v1.0.bat - GPU-PV UMD binding diagnostics launcher
+REM  Run this INSIDE the VM as Administrator.
+REM
+REM  Dumps the registry binding of the current OK NVIDIA partition
+REM  device so you can see whether UserModeDriverName/OpenGLDriverName
+REM  point to the current real driver folder hash, or a stale one
+REM  left over from a previous NVIDIA driver version.
 REM ============================================================
-title Host Camo v1.2 - Hyper-V VM Camouflage (Batch)
+title VM DiagUMD v1.0 - GPU-PV UMD binding diagnostics
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -16,7 +20,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set "PS1=%~dp0Host_Camo_v1.2.ps1"
+set "PS1=%~dp0VM_DiagUMD_v1.0.ps1"
 if not exist "%PS1%" (
     echo [X] Missing file: %PS1%
     pause

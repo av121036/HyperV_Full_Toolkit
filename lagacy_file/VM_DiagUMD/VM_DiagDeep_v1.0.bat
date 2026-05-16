@@ -1,10 +1,14 @@
 @echo off
-chcp 65001 >nul
 REM ============================================================
-REM  Host_Camo_v1.2.bat - Hyper-V Host side VM camouflage launcher
-REM  v1.2: 支援批量選擇 (逗號 / 區間 / all)
+REM  VM_DiagDeep_v1.0.bat - Deep diagnostics for GPU-PV D3D dead
+REM  Run this INSIDE the VM as Administrator.
+REM
+REM  Captures HVCI/VBS state, NVIDIA UMD/KMD versions, PnP problem
+REM  codes, 24h Display event log, dxdiag display section.
+REM
+REM  Output is long - run, screenshot or copy all output, paste back.
 REM ============================================================
-title Host Camo v1.2 - Hyper-V VM Camouflage (Batch)
+title VM DiagDeep v1.0 - Deep GPU-PV diagnostics
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -16,7 +20,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set "PS1=%~dp0Host_Camo_v1.2.ps1"
+set "PS1=%~dp0VM_DiagDeep_v1.0.ps1"
 if not exist "%PS1%" (
     echo [X] Missing file: %PS1%
     pause

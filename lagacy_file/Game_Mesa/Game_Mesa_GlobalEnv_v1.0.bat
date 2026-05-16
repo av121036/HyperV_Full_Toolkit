@@ -1,10 +1,13 @@
 @echo off
-chcp 65001 >nul
 REM ============================================================
-REM  Host_Camo_v1.2.bat - Hyper-V Host side VM camouflage launcher
-REM  v1.2: 支援批量選擇 (逗號 / 區間 / all)
+REM  Game_Mesa_GlobalEnv_v1.0.bat - Set Mesa env vars system-wide
+REM
+REM  Use this AFTER Game_Mesa_Setup_v1.0 has deployed Mesa DLLs
+REM  to the game folder. This sets the 5 Mesa env vars at the
+REM  Machine (system-wide) level so any process - including
+REM  Purple-spawned LC.exe - inherits them.
 REM ============================================================
-title Host Camo v1.2 - Hyper-V VM Camouflage (Batch)
+title Game Mesa GlobalEnv v1.0 - System-wide Mesa env vars
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -16,7 +19,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set "PS1=%~dp0Host_Camo_v1.2.ps1"
+set "PS1=%~dp0Game_Mesa_GlobalEnv_v1.0.ps1"
 if not exist "%PS1%" (
     echo [X] Missing file: %PS1%
     pause
