@@ -358,8 +358,8 @@ $y += 70
 
 Add-Step -Parent $tabVM -Y $y -Id 'vm_mesa' `
     -Title '4. Mesa 軟體 OpenGL (GPU partition 死掉時用)' `
-    -Desc 'GUI 一鍵下載 + 部署 Mesa + 設環境變數。Win10 + Blackwell GPU 必跑' `
-    -BatName 'Mesa_OneClick_v1.0.bat' `
+    -Desc 'GUI 一鍵下載 + 部署 Mesa + 設環境變數。Win10 + Blackwell GPU 必跑(v1.1 會自動處理 Defender)' `
+    -BatName 'Mesa_OneClick_v1.1.bat' `
     -SubFolder 'Mesa_OneClick' `
     -ButtonText 'Mesa_OneClick'
 $y += 70
