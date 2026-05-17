@@ -1,0 +1,23 @@
+# Windows shell scripts MUST use CRLF — CMD chokes on LF-only .bat files
+# (symptom: 'XXX' is not recognized as an internal or external command)
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+*.reg       text eol=crlf
+
+# Mark text files explicitly so git can normalize as needed
+*.md        text
+*.txt       text
+*.json      text
+
+# Binary files — never touch line endings
+*.7z        binary
+*.zip       binary
+*.exe       binary
+*.dll       binary
+*.png       binary
+*.jpg       binary
+*.vhdx      binary
+*.vmcx      binary
