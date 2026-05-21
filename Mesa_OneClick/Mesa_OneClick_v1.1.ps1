@@ -399,6 +399,34 @@ function Download-File {
     }
 }
 
+# 驗證壓縮檔大小是否合理。
+# - 若有 ExpectedSize(GitHub API 回報的 asset.size),允許 ±5% 偏差
+# - 若沒有(走 fallback URL),用 MinBytes 門檻擋掉明顯的半截檔
+function Test-ArchiveSize {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [long]$ExpectedSize = 0,
+        [long]$MinBytes = 10MB
+    )
+    if (-not (Test-Path $Path)) {
+        return @{ OK = $false; Reason = '檔案不存在'; ActualSize = 0 }
+    }
+    $actual = (Get-Item $Path).Length
+    if ($actual -lt $MinBytes) {
+        $reason = "檔案太小: {0:N2} MB (門檻 {1:N0} MB),極可能是半截下載 / 被防毒攔截" -f ($actual / 1MB), ($MinBytes / 1MB)
+        return @{ OK = $false; Reason = $reason; ActualSize = $actual }
+    }
+    if ($ExpectedSize -gt 0) {
+        $tolerance = [long]($ExpectedSize * 0.05)
+        $diff = [math]::Abs($actual - $ExpectedSize)
+        if ($diff -gt $tolerance) {
+            $reason = "檔案大小與預期不符: 實際 {0:N2} MB / 預期 {1:N2} MB (差距 > 5%)" -f ($actual / 1MB), ($ExpectedSize / 1MB)
+            return @{ OK = $false; Reason = $reason; ActualSize = $actual }
+        }
+    }
+    return @{ OK = $true; Reason = $null; ActualSize = $actual }
+}
+
 function Ensure-7zr {
     if (Test-Path $script:Sevenzr) {
         Log '7zr.exe 已存在'
@@ -425,12 +453,12 @@ function Get-LatestMesaURL {
         $asset = $rel.assets | Where-Object { $_.name -like 'mesa3d-*-release-msvc.7z' } | Select-Object -First 1
         if ($asset) {
             Log ("找到最新版: $($asset.name) ({0:N2} MB)" -f ($asset.size / 1MB)) '+'
-            return @{ URL = $asset.browser_download_url; Name = $asset.name }
+            return @{ URL = $asset.browser_download_url; Name = $asset.name; Size = [long]$asset.size }
         }
     } catch {
         Log "GitHub API 查詢失敗: $($_.Exception.Message),改用 fallback URL" '!'
     }
-    return @{ URL = $script:FallbackURL; Name = "mesa3d-$($script:FallbackVer)-release-msvc.7z" }
+    return @{ URL = $script:FallbackURL; Name = "mesa3d-$($script:FallbackVer)-release-msvc.7z"; Size = 0 }
 }
 
 function Do-DownloadMesa {
@@ -443,10 +471,28 @@ function Do-DownloadMesa {
     Set-Progress 20
 
     if (Test-Path $archive) {
-        Log "壓縮檔已存在,跳過下載: $archive"
-    } else {
+        $chk = Test-ArchiveSize -Path $archive -ExpectedSize $info.Size
+        if ($chk.OK) {
+            Log ("壓縮檔已存在且大小正常 ({0:N2} MB),跳過下載" -f ($chk.ActualSize / 1MB))
+        } else {
+            Log "快取的壓縮檔有問題: $($chk.Reason)" '!'
+            Log '刪除壞檔後重新下載...'
+            Remove-Item $archive -Force -ErrorAction SilentlyContinue
+        }
+    }
+    if (-not (Test-Path $archive)) {
         Log "下載 $($info.Name) (約 30~80 MB,請耐心等候)..."
         if (-not (Download-File $info.URL $archive)) { return $false }
+        # 下載完再驗一次,擋住「下載階段沒爆但檔案不完整」的情況
+        # (例如 Defender 一邊下載一邊把內容挖空、或 Cloudflare 中斷)
+        $chk = Test-ArchiveSize -Path $archive -ExpectedSize $info.Size
+        if (-not $chk.OK) {
+            Log "下載完成但檔案異常: $($chk.Reason)" 'X'
+            Log '可能原因: 即時防護攔截 / 網路被切斷 / 磁碟空間不足' 'X'
+            Remove-Item $archive -Force -ErrorAction SilentlyContinue
+            return $false
+        }
+        Log ("下載驗證通過 ({0:N2} MB)" -f ($chk.ActualSize / 1MB)) '+'
     }
     Set-Progress 60
 
@@ -459,9 +505,28 @@ function Do-DownloadMesa {
 
     Log "解壓 $($info.Name) -> $($script:MesaDir) ..."
     $args = @('x', $archive, "-o$($script:MesaDir)", '-y')
-    $p = Start-Process -FilePath $script:Sevenzr -ArgumentList $args -Wait -NoNewWindow -PassThru
+    # 把 stdout / stderr 都導到檔案,解壓失敗時撈出來印
+    # 7zr 的錯誤訊息通常寫到 stdout(不是 stderr),所以兩個都要抓
+    $stdoutFile = Join-Path $script:TempDir '7zr_stdout.log'
+    $stderrFile = Join-Path $script:TempDir '7zr_stderr.log'
+    $p = Start-Process -FilePath $script:Sevenzr -ArgumentList $args -Wait -NoNewWindow -PassThru `
+            -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
     if ($p.ExitCode -ne 0) {
         Log "解壓失敗 (exit code = $($p.ExitCode))" 'X'
+        foreach ($pair in @(@{File = $stdoutFile; Label = 'stdout'}, @{File = $stderrFile; Label = 'stderr'})) {
+            if (Test-Path $pair.File) {
+                $raw = Get-Content $pair.File -Raw -ErrorAction SilentlyContinue
+                if ($raw -and $raw.Trim()) {
+                    $lines = $raw -split "`r?`n" | Where-Object { $_ }
+                    # 優先列出含關鍵錯誤字眼的行;若沒有就 fallback 顯示最後 10 行
+                    $errLines = $lines | Where-Object { $_ -match 'Error|ERROR|Cannot|cannot|crc|CRC|Wrong|wrong|not enough|denied|Denied' }
+                    $show = if ($errLines) { $errLines } else { $lines | Select-Object -Last 10 }
+                    Log "  7zr $($pair.Label):" 'X'
+                    $show | ForEach-Object { Log "    $_" 'X' }
+                }
+            }
+        }
+        Log '常見原因: .7z 檔損壞 / Defender 解壓途中攔 DLL / 磁碟空間 / 沒有寫入權限' 'X'
         return $false
     }
     Set-Progress 90
