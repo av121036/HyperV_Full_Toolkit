@@ -653,7 +653,7 @@ if ($missingCritical -gt 0) {
 W-Title 'v1.5: 自動偵測並複製 NCSOFT 遊戲資料夾'
 
 # === 可調參數 (改這裡就能擴充支援) ===
-$ncRootKeys = @('NC', 'NCSOFT')
+$ncRootKeys = @('NC', 'NCSOFT', 'Gamania')   # 2026-08-01: 加 Gamania (新楓之谷經典版)
 $gamePatterns = @(
     'Lineage',     # Lineage / Lineage Classic / Lineage 2 / Lineage W
     'Purple',      # NCSOFT 啟動器
@@ -661,10 +661,12 @@ $gamePatterns = @(
     'Aion',        # 永恆紀元
     'Blade',       # Blade & Soul / 劍靈
     'Throne',      # Throne and Liberty (TL)
-    'BnS'          # B&S 縮寫資料夾
+    'BnS',         # B&S 縮寫資料夾
+    'maplestory'   # 2026-08-01: 新楓之谷 (Gamania\maplestory_classic)
 )
 # 如果遊戲裝在不同碟 (例如 D:\Games),在這加路徑
-$extraSearchRoots = @()
+# 2026-08-01: 加 C:\Program Files (Gamania 裝在 64-bit Program Files)
+$extraSearchRoots = @('C:\Program Files')
 # === 可調參數結束 ===
 
 $searchRoots = @()
@@ -697,13 +699,17 @@ foreach ($root in $searchRoots) {
             }
             if (-not $matched) { return }
 
-            # 用相對於 Program Files (x86) 的路徑保留原本資料夾結構
+            # 用相對於搜尋根目錄的路徑保留原本資料夾結構
+            # 2026-08-01: 目的資料夾改跟隨來源根目錄 (去掉磁碟機代號),
+            #             PF(x86) 的照舊進 Program Files (x86)\,
+            #             Gamania 在 C:\Program Files 就進 Program Files\
             $rel = $_.FullName.Substring($root.Length).TrimStart('\','/')
+            $rootRel = ($root -replace '^[A-Za-z]:\\', '')
             $copyJobs += [PSCustomObject]@{
                 RootName = $ncRoot.Name
                 GameName = $gameName
                 Src      = $_.FullName
-                Dst      = Join-Path $vmDrive ('Program Files (x86)\' + $rel)
+                Dst      = Join-Path $vmDrive (Join-Path $rootRel $rel)
             }
         }
     }
